@@ -44,13 +44,13 @@ function countRoom(roomName) {
 }
 
 wsServer.on("connection", socket => {
-    socket["nickname"] = "Anon";
+    socket["nickname"] = `Anon-${new Date().getTime()}`;
+    socket.emit("nickname_change", socket.nickname);
     socket.emit("room_change", publicRooms());
     socket.onAny((event) => {
         console.log(`Socket Event: ${event}`);
     });
-    socket.on("enter_room", (roomName, nickname, done) => {
-        socket["nickname"] = nickname;
+    socket.on("enter_room", (roomName, done) => {
         socket.join(roomName);
         const userCount = countRoom(roomName);
         done(userCount);
@@ -69,6 +69,24 @@ wsServer.on("connection", socket => {
         socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
         done();
     });
+    socket.on("nickname_change", (userName, done) => {
+        const sockets = wsServer.sockets.sockets;
+        sockets.forEach((key) => {
+            if(key.nickname === userName && key.id !== socket.id) {
+                userName = `${userName}@`;
+            }
+        });
+        socket["nickname"] = userName;
+        done(userName);
+    });
+    socket.on("leave_room", (roomName, done) => {
+        socket.leave(roomName);
+        if(countRoom(roomName) > 0) {
+            socket.to(roomName).emit("bye", socket.nickname, countRoom(roomName));
+        }
+        wsServer.sockets.emit("room_change", publicRooms());
+        done();
+    })
 });
 
 /* const sockets = [];
