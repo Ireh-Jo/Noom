@@ -2,10 +2,7 @@ const socket = io();
 
 const welcome = document.querySelector("#welcome");
 const join = document.querySelector("#join");
-const nickname = document.querySelector("#name");
 const room = document.querySelector("#room");
-const leaveBtn = document.querySelector(".room__leave");
-const roomList = document.querySelector("#roomList");
 
 room.hidden = true;
 
@@ -14,10 +11,8 @@ let roomName;
 function addMessage(message) {
     const ul = room.querySelector("ul");
     const li = document.createElement("li");
-    const aside = room.querySelector("section aside");
     li.innerText = message;
     ul.append(li);
-    aside.scrollTop = aside.scrollHeight;
 }
 
 function handleMessageSubmit(event) {
@@ -32,40 +27,20 @@ function handleMessageSubmit(event) {
 
 function showRoom(newCount) {
     welcome.hidden = true;
-    roomList.hidden = true;
     room.hidden = false;
     changeTitle(newCount);
     const msgForm = room.querySelector("#msg");
-    const ul = room.querySelector("section aside ul");
-    ul.innerHTML = "";
     msgForm.addEventListener("submit", handleMessageSubmit);
 }
 
 function handleRoomSubmit(event) {
     event.preventDefault();
-    const roomInput = join.querySelector("input");
-    socket.emit("enter_room", roomInput.value, showRoom);
+    const roomInput = join.querySelector("input:nth-child(1)");
+    const nameInput = join.querySelector("input:nth-child(2)");
+    socket.emit("enter_room", roomInput.value, nameInput.value, showRoom);
     roomName = roomInput.value;
     roomInput.value = "";
-}
-
-function handleRoomClick(event) {
-    event.preventDefault();
-    const selectRoomName = event.target.innerText.split(" ")[0];
-    socket.emit("enter_room", selectRoomName, showRoom);
-    roomName = selectRoomName;
-}
-
-function handleNicknameSubmit(event) {
-    event.preventDefault();
-    const nicknameInput = nickname.querySelector("input");
-    socket.emit("nickname_change", nicknameInput.value, changeNickname);
-    nicknameInput.value = "";
-}
-
-function handleLeaveBtnClick(event) {
-    event.preventDefault();
-    socket.emit("leave_room", roomName, leaveRoom);
+    nameInput.value = "";
 }
 
 function changeTitle(newCount) {
@@ -73,20 +48,7 @@ function changeTitle(newCount) {
     h3.innerText = `Room ${roomName} (${newCount})`;
 }
 
-function changeNickname(userName) {
-    const b = document.querySelector("header p b");
-    b.innerText = `'${userName}'`;
-}
-
-function leaveRoom() {
-    welcome.hidden = false;
-    roomList.hidden = false;
-    room.hidden = true;
-}
-
 join.addEventListener("submit", handleRoomSubmit);
-nickname.addEventListener("submit", handleNicknameSubmit);
-leaveBtn.addEventListener("click", handleLeaveBtnClick);
 
 socket.on("welcome", (user, newCount) => {
     changeTitle(newCount);
@@ -101,21 +63,11 @@ socket.on("bye", (user, newCount) => {
 socket.on("new_message", addMessage);
 
 socket.on("room_change", (rooms) => {
-    const openRoomList = document.querySelector("#roomList ul li ul");
-    const roomCount = document.querySelector("#roomList ul li a span");
-    roomCount.innerText = `(${rooms.length})`;
-    openRoomList.innerHTML = "";
+    const roomList = welcome.querySelector("ul");
+    roomList.innerHTML = "";
     rooms.forEach((room) => {
         const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = "#";
-        a.innerText = room;
-        a.addEventListener("click", handleRoomClick);
-        li.append(a);
-        openRoomList.append(li);
+        li.innerText = room;
+        roomList.append(li);
     });
-});
-
-socket.on("nickname_change", (user) => {
-    changeNickname(user);
 });
